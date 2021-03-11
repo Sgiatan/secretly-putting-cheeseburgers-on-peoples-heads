@@ -12,6 +12,10 @@ pygame.display.set_caption("Secretly Putting Cheeseburgers On People's Heads")
 icon = pygame.image.load('assets/icon.png')
 pygame.display.set_icon(icon)
 
+# Music
+pygame.mixer.music.load('assets/soundtrack.wav')
+pygame.mixer.music.play(-1)
+
 # Player
 playerImg = pygame.image.load('assets/sprites/player.png')
 playerX = -110
@@ -26,7 +30,7 @@ burger_speed = 1
 # Enemy initialisation
 enemy_images = [x.path for x in list(os.scandir('assets\\victims'))]
 enemy_speed = 0.5
-spawn_rate = 2000
+spawn_rate = 1000
 spawn_clock = 0
 spawn_time = random.randint(0, spawn_rate)
 
@@ -34,16 +38,51 @@ spawn_time = random.randint(0, spawn_rate)
 total_score = 0
 level_score = 0
 level = 0
+burgers_left = 50
+game_over = False
 
 score_x, score_y = 50, window_y - 100
 font = pygame.font.Font('assets/insaniburger.regular.ttf', 32)
+menu_font = pygame.font.Font('assets/insaniburger.regular.ttf', 72)
 
 
 def show_score(x, y):
     score_text = font.render(f"Score: {total_score}", True, (0, 0, 0))
     level_text = font.render(f" Level: {level}", True, (0, 0, 0))
-    screen.blit(score_text, (x, y))
-    screen.blit(level_text, (x + 5, y + 30))
+    burger_text = font.render(f"Burgers: {burgers_left}", True, (0, 0, 0))
+    screen.blit(score_text, (x, y + 30))
+    screen.blit(level_text, (x + 5, y))
+    screen.blit(burger_text, (x - 31, y + 60))
+
+
+def show_menu():
+    while True:
+        screen.fill((252, 185, 40))
+        top_text = menu_font.render("Secretly Putting", True, (0, 0, 0))
+        middle_text = menu_font.render("Cheeseburgers On", True, (0, 0, 0))
+        bottom_text = menu_font.render("People's Heads", True, (0, 0, 0))
+        press_space = font.render("Press Space", True, (0, 0, 0))
+        screen.blit(top_text, (100, 100))
+        screen.blit(middle_text, (85, 160))
+        screen.blit(bottom_text, (149, 220))
+        screen.blit(press_space, (310, 500))
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    return True
+
+        pygame.display.update()
+
+
+def show_game_over():
+    global game_over
+    game_over = True
+    over_text = menu_font.render("You were spotted", True, (0, 0, 0))
+    screen.blit(over_text, (85, 100))
 
 
 def player(x, y):
@@ -74,7 +113,7 @@ class Enemy:
 
 
 burgers = []
-enemies = [Enemy() for _ in range(6)]
+enemies = []  # Enemy() for _ in range(6)]-stop
 
 
 def is_collision(enemyX, enemyY, burgerX, burgerY):
@@ -83,7 +122,7 @@ def is_collision(enemyX, enemyY, burgerX, burgerY):
 
 
 # game loop
-running = True
+running = show_menu()
 
 while running:
     screen.fill((252, 185, 40))
@@ -99,9 +138,13 @@ while running:
             if event.key == pygame.K_DOWN:
                 playerY_change = player_speed
             if event.key == pygame.K_SPACE:
-                burger = Burger()
-                burgers.append(burger)
-                burger.fire()
+                if burgers_left != 0:
+                    burger = Burger()
+                    burgers.append(burger)
+                    burger.fire()
+                    burgers_left -= 1
+            if event.key == pygame.K_ESCAPE:
+                running = show_menu()
 
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_UP or event.key == pygame.K_DOWN:
@@ -127,48 +170,55 @@ while running:
             burger.fire()
             burger.x += burger.x_change
 
-    # spawning new enemies
-    spawn_clock += 1
-    if spawn_clock == spawn_time:
-        enemies.append(Enemy())
-        spawn_clock = 0
-        spawn_time = random.randint(100, 2000)
+    if not game_over:
+        # spawning new enemies
+        spawn_clock += 1
+        if spawn_clock == spawn_time:
+            enemies.append(Enemy())
+            spawn_clock = 0
+            spawn_time = random.randint(100, 2000)
 
-    # moving the enemies
-    for enemy in enemies:
-        enemy.y += enemy.y_change
+        # moving the enemies
+        for enemy in enemies:
+            enemy.y += enemy.y_change
 
-        # enemy boundaries
-        if enemy.y <= 0:
-            enemy.y_change = enemy_speed
-            enemy.x += enemy.x_change
-        elif enemy.y >= window_y - 79:
-            enemy.y_change = -enemy_speed
-            enemy.x += enemy.x_change
+            # death check
+            if enemy.x <= playerX + playerX_to_burgerX:
+                enemies.clear()
+                show_game_over()
+                break
 
-        # death check
-        if enemy.x <= playerX + playerX_to_burgerX:
-            running = False
+            # enemy boundaries
+            if enemy.y <= 0:
+                enemy.y_change = enemy_speed
+                enemy.x += enemy.x_change
+            elif enemy.y >= window_y - 79:
+                enemy.y_change = -enemy_speed
+                enemy.x += enemy.x_change
 
-        # collision
-        for burger in burgers:
-            collision = is_collision(enemy.x, enemy.y, burger.x, burger.y)
-            if collision:
-                burger.x = playerX + playerX_to_burgerX
-                burger.is_fired = False
-                burgers.remove(burger)
-                enemies.remove(enemy)
-                level_score += 1
-                total_score += 1
+            # collision
+            for burger in burgers:
+                collision = is_collision(enemy.x, enemy.y, burger.x, burger.y)
+                if collision:
+                    burger.x = playerX + playerX_to_burgerX
+                    burger.is_fired = False
+                    burgers.remove(burger)
+                    enemies.remove(enemy)
+                    level_score += 1
+                    total_score += 1
 
-        screen.blit(enemy.img, (enemy.x, enemy.y))
+            screen.blit(enemy.img, (enemy.x, enemy.y))
 
-    if level_score == level + 10:
-        level += 1
-        level_score = 0
-        enemy_speed += 0.2
-        spawn_rate -= spawn_rate * 0.1
-        enemies = [Enemy() for _ in range(level + 6)]
+        if level_score == level + 10:
+            level += 1
+            burgers_left += level + 20
+            level_score = 0
+            enemy_speed += 0.2
+            spawn_rate -= level * 10 if level * 10 < spawn_rate else spawn_rate
+            # enemies = [Enemy() for _ in range(level + 6)]
+
+    else:
+        show_game_over()
 
     player(playerX, playerY)
     show_score(score_x, score_y)
