@@ -9,11 +9,11 @@ screen = pygame.display.set_mode((window_x, window_y))
 
 # Window
 pygame.display.set_caption("Secretly Putting Cheeseburgers On People's Heads")
-icon = pygame.image.load('assets/pixel_borger.png')
+icon = pygame.image.load('assets/icon.png')
 pygame.display.set_icon(icon)
 
 # Player
-playerImg = pygame.image.load('assets/sprite.png')
+playerImg = pygame.image.load('assets/sprites/player.png')
 playerX = -110
 playerY = 200
 playerY_change = 0
@@ -30,8 +30,20 @@ spawn_rate = 2000
 spawn_clock = 0
 spawn_time = random.randint(0, spawn_rate)
 
-score = 0
+# Score
+total_score = 0
+level_score = 0
 level = 0
+
+score_x, score_y = 50, window_y - 100
+font = pygame.font.Font('assets/insaniburger.regular.ttf', 32)
+
+
+def show_score(x, y):
+    score_text = font.render(f"Score: {total_score}", True, (0, 0, 0))
+    level_text = font.render(f" Level: {level}", True, (0, 0, 0))
+    screen.blit(score_text, (x, y))
+    screen.blit(level_text, (x + 5, y + 30))
 
 
 def player(x, y):
@@ -40,7 +52,7 @@ def player(x, y):
 
 class Burger:
     def __init__(self):
-        self.img = pygame.image.load('assets/burger_cropped.png')
+        self.img = pygame.image.load('assets/sprites/burger.png')
         self.x = playerX + playerX_to_burgerX
         self.y = playerY + 76
         self.x_change = burger_speed
@@ -49,9 +61,6 @@ class Burger:
     def fire(self):
         self.is_fired = True
         screen.blit(self.img, (self.x, self.y))
-
-
-burgers = []
 
 
 class Enemy:
@@ -64,6 +73,7 @@ class Enemy:
         screen.blit(self.img, (self.x, self.y))
 
 
+burgers = []
 enemies = [Enemy() for _ in range(6)]
 
 
@@ -147,19 +157,19 @@ while running:
                 burger.x = playerX + playerX_to_burgerX
                 burger.is_fired = False
                 burgers.remove(burger)
-                score += 1
-                print(score)
                 enemies.remove(enemy)
+                level_score += 1
+                total_score += 1
 
         screen.blit(enemy.img, (enemy.x, enemy.y))
 
-    if score == 20:
+    if level_score == level + 10:
         level += 1
-        score = 0
+        level_score = 0
         enemy_speed += 0.2
         spawn_rate -= spawn_rate * 0.1
         enemies = [Enemy() for _ in range(level + 6)]
 
     player(playerX, playerY)
-
+    show_score(score_x, score_y)
     pygame.display.update()
