@@ -41,6 +41,27 @@ level = 0
 burgers_left = 50
 game_over = False
 
+
+def new_game():
+    global enemy_speed, spawn_rate, spawn_clock, spawn_time
+    global total_score, level_score, level, burgers_left, game_over
+
+    pygame.mixer.music.unpause()
+
+    # Reset enemies
+    enemy_speed = 0.5
+    spawn_rate = 1000
+    spawn_clock = 0
+    spawn_time = random.randint(0, spawn_rate)
+
+    # Reset score
+    total_score = 0
+    level_score = 0
+    level = 0
+    burgers_left = 50
+    game_over = False
+
+
 score_x, score_y = 50, window_y - 100
 font = pygame.font.Font('assets/insaniburger.regular.ttf', 32)
 menu_font = pygame.font.Font('assets/insaniburger.regular.ttf', 72)
@@ -81,6 +102,7 @@ def show_menu():
 def show_game_over():
     global game_over
     game_over = True
+    pygame.mixer.music.pause()
     over_text = menu_font.render("You were spotted", True, (0, 0, 0))
     screen.blit(over_text, (85, 100))
 
@@ -123,6 +145,7 @@ def is_collision(enemyX, enemyY, burgerX, burgerY):
 
 # game loop
 running = show_menu()
+new_game()
 
 while running:
     screen.fill((252, 185, 40))
@@ -138,7 +161,10 @@ while running:
             if event.key == pygame.K_DOWN:
                 playerY_change = player_speed
             if event.key == pygame.K_SPACE:
-                if burgers_left != 0:
+                if game_over:
+                    new_game()
+
+                elif burgers_left != 0:
                     burger = Burger()
                     burgers.append(burger)
                     burger.fire()
@@ -181,11 +207,14 @@ while running:
         # moving the enemies
         for enemy in enemies:
             enemy.y += enemy.y_change
+            print(enemy.y_change)
 
             # death check
-            if enemy.x <= playerX + playerX_to_burgerX:
+            if enemy.x <= 200:
                 enemies.clear()
                 show_game_over()
+                i_tried = pygame.mixer.Sound('assets/i_tried.mp3')
+                i_tried.play()
                 break
 
             # enemy boundaries
@@ -209,12 +238,13 @@ while running:
 
             screen.blit(enemy.img, (enemy.x, enemy.y))
 
+        # change difficulty
         if level_score == level + 10:
             level += 1
             burgers_left += level + 20
             level_score = 0
             enemy_speed += 0.2
-            spawn_rate -= level * 10 if level * 10 < spawn_rate else spawn_rate
+            spawn_rate -= min(spawn_rate, level - 50)
             # enemies = [Enemy() for _ in range(level + 6)]
 
     else:
