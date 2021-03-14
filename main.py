@@ -2,6 +2,19 @@ import pygame
 import random
 import math
 import os
+import sys
+
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 
 pygame.init()
 window_x, window_y = 800, 600
@@ -9,15 +22,15 @@ screen = pygame.display.set_mode((window_x, window_y))
 
 # Window
 pygame.display.set_caption("Secretly Putting Cheeseburgers On People's Heads")
-icon = pygame.image.load('assets/icon.png')
+icon = pygame.image.load(resource_path('assets/icon.png'))
 pygame.display.set_icon(icon)
 
 # Music
-pygame.mixer.music.load('assets/soundtrack.wav')
+pygame.mixer.music.load(resource_path('assets/soundtrack.wav'))
 pygame.mixer.music.play(-1)
 
 # Player
-playerImg = pygame.image.load('assets/sprites/player.png')
+playerImg = pygame.image.load(resource_path('assets/sprites/player.png'))
 playerX = -110
 playerY = 200
 playerY_change = 0
@@ -28,7 +41,7 @@ playerX_to_burgerX = 230
 burger_speed = 1
 
 # Enemy initialisation
-enemy_images = [x.path for x in list(os.scandir('assets\\victims'))]
+enemy_images = [resource_path(x.path) for x in list(os.scandir(resource_path('assets/victims')))]
 enemy_speed = 0.5
 spawn_rate = 1000
 spawn_clock = 0
@@ -63,8 +76,8 @@ def new_game():
 
 
 score_x, score_y = 50, window_y - 100
-font = pygame.font.Font('assets/insaniburger.regular.ttf', 32)
-menu_font = pygame.font.Font('assets/insaniburger.regular.ttf', 72)
+font = pygame.font.Font(resource_path('assets/insaniburger.regular.ttf'), 32)
+menu_font = pygame.font.Font(resource_path('assets/insaniburger.regular.ttf'), 72)
 
 
 def show_score(x, y):
@@ -113,7 +126,7 @@ def player(x, y):
 
 class Burger:
     def __init__(self):
-        self.img = pygame.image.load('assets/sprites/burger.png')
+        self.img = pygame.image.load(resource_path('assets/sprites/burger.png'))
         self.x = playerX + playerX_to_burgerX
         self.y = playerY + 76
         self.x_change = burger_speed
@@ -156,21 +169,21 @@ while running:
             running = False
 
         if event.type == pygame.KEYDOWN:
+            print(event.type)
             if event.key == pygame.K_UP:
                 playerY_change = -player_speed
             if event.key == pygame.K_DOWN:
                 playerY_change = player_speed
             if event.key == pygame.K_SPACE:
-                if game_over:
-                    new_game()
-
-                elif burgers_left != 0:
+                if burgers_left != 0:
                     burger = Burger()
                     burgers.append(burger)
                     burger.fire()
                     burgers_left -= 1
             if event.key == pygame.K_ESCAPE:
                 running = show_menu()
+            if event.key == pygame.K_r:
+                new_game()
 
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_UP or event.key == pygame.K_DOWN:
@@ -207,13 +220,12 @@ while running:
         # moving the enemies
         for enemy in enemies:
             enemy.y += enemy.y_change
-            print(enemy.y_change)
 
             # death check
             if enemy.x <= 200:
                 enemies.clear()
                 show_game_over()
-                i_tried = pygame.mixer.Sound('assets/i_tried.mp3')
+                i_tried = pygame.mixer.Sound(resource_path('assets/i_tried.mp3'))
                 i_tried.play()
                 break
 
@@ -241,10 +253,11 @@ while running:
         # change difficulty
         if level_score == level + 10:
             level += 1
-            burgers_left += level + 20
+            burgers_left += max(10, 25 - level)
             level_score = 0
             enemy_speed += 0.2
-            spawn_rate -= min(spawn_rate, level - 50)
+            spawn_rate -= min(spawn_rate, 2 * level + 40)
+            print(spawn_rate)
             # enemies = [Enemy() for _ in range(level + 6)]
 
     else:
